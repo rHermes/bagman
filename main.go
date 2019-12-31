@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/cheggaaa/pb/v3"
+	"github.com/google/renameio"
 	"golang.org/x/net/proxy"
 )
 
@@ -63,48 +64,52 @@ func getMedia(c *http.Client, basedir, board string, thread CatalogThread, post 
 		return err
 	}
 
-	fj, err := os.OpenFile(fjson, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
-	if err != nil {
-		if !os.IsExist(err) {
+	if _, err := os.Stat(fjson); err != nil {
+		if !os.IsNotExist(err) {
 			return err
 		}
-	} else {
+
+		fj, err := renameio.TempFile("", fjson)
+		if err != nil {
+			return err
+		}
+		defer fj.Cleanup()
+
 		jser := json.NewEncoder(fj)
 		if err := jser.Encode(thread); err != nil {
-			fj.Close()
-			os.Remove(fjson)
 			return err
 		}
-		fj.Close()
+
+		if err := fj.CloseAtomicallyReplace(); err != nil {
+			return err
+		}
 	}
 
-	fp, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
-	if err != nil {
-		// If we have it we don't download it
-		if os.IsExist(err) {
-			return nil
-		}
+	if _, err := os.Stat(fpath); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
 		return err
 	}
+
+	fp, err := renameio.TempFile("", fpath)
+	if err != nil {
+		return err
+	}
+	defer fp.Cleanup()
 
 	u := fmt.Sprintf("https://i.4cdn.org/%s/%s", board, filename)
 	resp, err := c.Get(u)
 	if err != nil {
-		fp.Close()
-		os.Remove(fpath)
 		return err
 	}
 	defer resp.Body.Close()
 
 	_, err = io.Copy(fp, resp.Body)
 	if err != nil {
-		fp.Close()
-		os.Remove(fpath)
 		return err
 	}
 
-	fp.Close()
-	return nil
+	return fp.CloseAtomicallyReplace()
 }
 
 func getThread(c *http.Client, board string, threadNum int) (*Thread, error) {
