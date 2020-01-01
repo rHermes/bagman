@@ -54,8 +54,6 @@ func getTorClient() (*http.Client, error) {
 }
 
 func getMedia(c *http.Client, basedir, board string, thread CatalogThread, post Post) error {
-
-	// first we have to check if the basedir path exists
 	filename := fmt.Sprintf("%d%s", post.Tim, post.Ext)
 	fdir := filepath.Join(basedir, board, fmt.Sprintf("%d", thread.No))
 	fjson := filepath.Join(fdir, "meta.json")
