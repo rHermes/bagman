@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -157,16 +158,14 @@ func ripChan(c *http.Client) error {
 	}
 
 	for _, b := range cat {
-		fmt.Printf("Page: %d\n", b.Page)
+		log.Printf("Page: %d\n", b.Page)
 		for _, t := range b.Threads {
-			fmt.Printf("\tNo: %d\n", t.No)
-			fmt.Printf("\t\tSubject: %s\n", t.Sub)
+			log.Printf("No: %d - %s\n", t.No, t.Sub)
 
 			thr, err := getThread(c, *boardFlag, t.No)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("\t\tNum posts: %d\n", len(thr.Posts))
 
 			imgs := []Post{}
 			for _, v := range thr.Posts {
@@ -174,7 +173,6 @@ func ripChan(c *http.Client) error {
 					imgs = append(imgs, v)
 				}
 			}
-			fmt.Printf("\t\tNum images: %d vs %d\n", len(imgs), t.Images)
 			bar := pb.Full.Start(len(imgs))
 
 			for _, img := range imgs {
