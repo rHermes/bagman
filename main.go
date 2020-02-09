@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	proxyStr   = flag.String("proxy", "socks5://127.0.0.1:9150", "The address of the proxy")
-	boardFlag  = flag.String("board", "wg", "The board we wish to read from")
-	outdirFlag = flag.String("out", "bag", "The path to put the media files")
+	proxyStr     = flag.String("proxy", "socks5://127.0.0.1:9150", "The address of the proxy")
+	boardFlag    = flag.String("board", "wg", "The board we wish to read from")
+	outdirFlag   = flag.String("out", "bag", "The path to put the media files")
+	progressFlag = flag.Bool("progress", false, "If we should print progress")
 )
 
 func fatalf(fmtStr string, args interface{}) {
@@ -171,15 +172,23 @@ func ripChan(c *http.Client) error {
 					imgs = append(imgs, v)
 				}
 			}
-			bar := pb.Full.Start(len(imgs))
+
+			var bar *pb.ProgressBar
+			if *progressFlag {
+				bar = pb.Full.Start(len(imgs))
+			}
 
 			for _, img := range imgs {
 				if err := getMedia(c, *outdirFlag, *boardFlag, t, img); err != nil {
 					return err
 				}
-				bar.Increment()
+				if *progressFlag {
+					bar.Increment()
+				}
 			}
-			bar.Finish()
+			if *progressFlag {
+				bar.Finish()
+			}
 		}
 	}
 
